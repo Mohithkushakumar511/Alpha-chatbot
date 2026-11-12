@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --alpha-bg: #101010;
+    --alpha-header: #0A0A0A;
+    --alpha-chatbox: #181818;
+    --alpha-surface: #181818;
+    --alpha-surface-secondary: #202020;
+    --alpha-dark-red: #251719;
+    --alpha-input: #151515;
+    --alpha-crimson: #E11D48;
+    --alpha-crimson-deep: #BE123C;
+    --alpha-crimson-hover: #9F1239;
+    --alpha-crimson-glow: #F43F5E;
+    --alpha-border: #383034;
+    --alpha-text-primary: #F5F5F5;
+    --alpha-text-secondary: #B8B8B8;
+    --alpha-bubble-user: #4A1726;
+    --alpha-bubble-ai: #222222;
+    --alpha-status: #E11D48;
+    --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html {
+    width: 100%;
+    height: 100%;
+  }
+
+  body, #root {
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+    background-color: #101010;
+    color: #F5F5F5;
+    font-family: var(--font-main);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+.alpha-ambient-bg {
+  background-color: #101010;
+  background-image: 
+    radial-gradient(circle at 18% 15%, rgba(225, 29, 72, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 82% 50%, rgba(190, 18, 60, 0.05) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(37, 23, 25, 0.5) 0%, transparent 50%),
+    linear-gradient(to bottom, #101010 0%, #0A0A0A 100%);
+  background-attachment: fixed;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(225, 29, 72, 0.35);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(225, 29, 72, 0.65);
+}
+
+@keyframes botFloatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-bot-float {
+  animation: botFloatSlow 4s ease-in-out infinite;
+}
