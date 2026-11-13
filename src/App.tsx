@@ -10,7 +10,19 @@ import type { AIMode, Message, Conversation, SystemStatus } from './types';
 
 const STORAGE_KEY = 'alpha_conversations_v1';
 const ACTIVE_CONV_KEY = 'alpha_active_conv_v1';
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const getApiBase = (): string => {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  if (!envUrl) {
+    return 'http://localhost:3001';
+  }
+  const formatted = envUrl.startsWith('http://') || envUrl.startsWith('https://')
+    ? envUrl
+    : `https://${envUrl}`;
+  return formatted.replace(/\/+$/, '');
+};
+
+const API_BASE = getApiBase();
 
 export const App: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -33,6 +45,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     fetchSystemStatus();
+    const interval = setInterval(fetchSystemStatus, 30000);
 
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -65,6 +78,8 @@ export const App: React.FC = () => {
       console.error('Failed to load chat history from LocalStorage:', err);
       initNewChat();
     }
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -89,12 +104,19 @@ export const App: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         setSystemStatus(data);
+      } else {
+        setSystemStatus({
+          server: { online: false, label: 'Connecting...' },
+          groq: { connected: false, label: 'Unavailable' },
+          langSearch: { connected: false, label: 'Unavailable' },
+          voice: { available: true, label: 'Browser Audio' },
+        });
       }
     } catch {
       setSystemStatus({
-        server: { online: true, label: 'Online' },
-        groq: { connected: true, label: 'Connected' },
-        langSearch: { connected: true, label: 'Connected' },
+        server: { online: false, label: 'Connecting...' },
+        groq: { connected: false, label: 'Unavailable' },
+        langSearch: { connected: false, label: 'Unavailable' },
         voice: { available: true, label: 'Browser Audio' },
       });
     }
@@ -246,10 +268,22 @@ export const App: React.FC = () => {
         return;
       }
 
+      const isConnectionError =
+        !err.message ||
+        err.message.includes('Failed to fetch') ||
+        err.message.includes('NetworkError') ||
+        err.message.includes('Load failed') ||
+        err.message.includes('502') ||
+        err.message.includes('503');
+
+      const friendlyMessage = isConnectionError
+        ? `⚠️ **Backend is waking up or unreachable.**\n\nIf you are using Render free tier, the service spins down after inactivity and takes ~30–60 seconds to wake up. Please wait a moment and try again.`
+        : `⚠️ **Error generating response:** ${err.message || 'Please check your connection and try again.'}`;
+
       const errorMsg: Message = {
         id: 'msg-err-' + Date.now(),
         role: 'assistant',
-        content: `⚠️ **Error generating response:** ${err.message || 'Please check your connection and try again.'}`,
+        content: friendlyMessage,
         timestamp: new Date().toISOString(),
         mode: chosenMode,
       };

@@ -13,6 +13,7 @@ from server.config import (
     LANGSEARCH_API_KEY,
     FISH_AUDIO_API_KEY,
     BASE_DIR,
+    FRONTEND_URL,
 )
 from server.routes.status import router as status_router
 from server.routes.chat import router as chat_router
@@ -54,17 +55,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+cors_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
+
+if FRONTEND_URL:
+    for url in FRONTEND_URL.split(","):
+        cleaned = url.strip().rstrip("/")
+        if cleaned and cleaned not in cors_origins:
+            cors_origins.append(cleaned)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "*",
-    ],
+    allow_origins=cors_origins,
+    allow_origin_regex=r"^https:\/\/.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
