@@ -36,10 +36,10 @@ export const FloatingRobot: React.FC<FloatingRobotProps> = ({
             onClick={() => onOpenChat('chat')}
             className="relative group cursor-pointer px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-[#181818]/95 hover:bg-[#202020] border border-[#E11D48]/80 hover:border-[#F43F5E] shadow-[0_0_24px_rgba(225,29,72,0.3)] hover:shadow-[0_0_34px_rgba(225,29,72,0.5)] backdrop-blur-xl transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 min-w-[160px] sm:min-w-[175px]"
           >
-            {/* Header: Sparkle + "Hello Mohith!" */}
+            {/* Header: Sparkle + "Hello buddy!" */}
             <div className="flex items-center gap-1.5 text-[#F43F5E] font-semibold text-xs sm:text-[13px] leading-snug">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#E11D48] fill-[#E11D48]/40" />
-              <span className="text-[#F5F5F5] font-bold tracking-wide">Hello Mohith!</span>
+              <span className="text-[#F5F5F5] font-bold tracking-wide">Hello buddy!</span>
             </div>
 
             {/* Subtext: "How can I help you today?" */}
