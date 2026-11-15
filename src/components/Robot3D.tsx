@@ -36,15 +36,15 @@ export const Robot3D: React.FC<Robot3DProps> = ({
     keyLight.position.set(2, 3, 3);
     scene.add(keyLight);
 
-    const purplePoint = new THREE.PointLight(0xe11d48, 3.5, 8);
+    const purplePoint = new THREE.PointLight(0x8b5cf6, 3.8, 8);
     purplePoint.position.set(1.5, 0.8, 2.2);
     scene.add(purplePoint);
 
-    const violetRimPoint = new THREE.PointLight(0x9f1239, 3.0, 8);
+    const violetRimPoint = new THREE.PointLight(0x38bdf8, 3.0, 8);
     violetRimPoint.position.set(-2.0, 1.2, -1.2);
     scene.add(violetRimPoint);
 
-    const pedestalLight = new THREE.PointLight(0xf43f5e, 3.0, 5);
+    const pedestalLight = new THREE.PointLight(0x8b5cf6, 3.2, 5);
     pedestalLight.position.set(0, -0.85, 0.5);
     scene.add(pedestalLight);
 
@@ -69,7 +69,7 @@ export const Robot3D: React.FC<Robot3DProps> = ({
     });
 
     const cyanNeonMat = new THREE.MeshBasicMaterial({
-      color: 0xe11d48,
+      color: 0x8b5cf6,
     });
 
     const robotRoot = new THREE.Group();
@@ -88,7 +88,7 @@ export const Robot3D: React.FC<Robot3DProps> = ({
     headGroup.add(visorMesh);
 
     const eyeNeonMat = new THREE.MeshBasicMaterial({
-      color: 0xe11d48,
+      color: 0x38bdf8,
       depthTest: false,
     });
     const createSmilingEye = (isLeft: boolean) => {
@@ -189,9 +189,9 @@ export const Robot3D: React.FC<Robot3DProps> = ({
 
     const glowCircleGeo = new THREE.CircleGeometry(0.09, 32);
     const glowCircleMat = new THREE.MeshBasicMaterial({
-      color: 0xbe123c,
+      color: 0x8b5cf6,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.6,
     });
     const glowCircleMesh = new THREE.Mesh(glowCircleGeo, glowCircleMat);
     glowCircleMesh.position.set(0, 0, 0.004);
@@ -260,7 +260,7 @@ export const Robot3D: React.FC<Robot3DProps> = ({
     const coreDiscGeo = new THREE.CircleGeometry(0.24, 32);
     coreDiscGeo.rotateX(-Math.PI / 2);
     const coreDiscMat = new THREE.MeshBasicMaterial({
-      color: 0xe11d48,
+      color: 0x8b5cf6,
       transparent: true,
       opacity: 0.55,
     });
@@ -270,9 +270,9 @@ export const Robot3D: React.FC<Robot3DProps> = ({
 
     const coneGeo = new THREE.CylinderGeometry(0.48, 0.38, 0.32, 32, 1, true);
     const coneMat = new THREE.MeshBasicMaterial({
-      color: 0x9f1239,
+      color: 0x6d28d9,
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.16,
       side: THREE.DoubleSide,
     });
     const coneMesh = new THREE.Mesh(coneGeo, coneMat);
@@ -331,7 +331,7 @@ export const Robot3D: React.FC<Robot3DProps> = ({
     <div
       ref={mountRef}
       style={{ width, height }}
-      className="flex items-center justify-center pointer-events-none select-none drop-shadow-[0_0_35px_rgba(225,29,72,0.25)]"
+      className="flex items-center justify-center pointer-events-none select-none drop-shadow-[0_0_40px_rgba(139,92,246,0.35)]"
     />
   );
 };

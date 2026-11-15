@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from './components/Navbar';
-import { HeroSection } from './components/HeroSection';
-import { ApiStatusBar } from './components/ApiStatusBar';
-import { FeatureCards } from './components/FeatureCards';
+import { Sidebar } from './components/Sidebar';
+import { WelcomeScreen } from './components/WelcomeScreen';
+import { MessageList } from './components/MessageList';
+import { MessageComposer } from './components/MessageComposer';
+import { SettingsModal } from './components/SettingsModal';
 import { FloatingRobot } from './components/FloatingRobot';
-import { ChatPanel } from './components/ChatPanel';
-import { IntegrationModal } from './components/IntegrationModal';
 import type { AIMode, Message, Conversation, SystemStatus } from './types';
 
 const STORAGE_KEY = 'alpha_conversations_v1';
@@ -32,8 +32,9 @@ export const App: React.FC = () => {
   const [activeMode, setActiveMode] = useState<AIMode>('chat');
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
 
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isIntegrationOpen, setIsIntegrationOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const showCornerCompanion = true;
 
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -42,6 +43,13 @@ export const App: React.FC = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<any>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+
+  // Set default sidebar open on large screens
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setIsSidebarOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     fetchSystemStatus();
@@ -126,14 +134,14 @@ export const App: React.FC = () => {
     const welcomeMsg: Message = {
       id: 'welcome-' + Date.now(),
       role: 'assistant',
-      content: "Hey! I'm ALPHA 👋\nWhat would you like to do today?",
+      content: "Hey, I'm ALPHA 👋 Your futuristic AI universe companion. What would you like to explore today?",
       timestamp: new Date().toISOString(),
       mode: 'chat',
     };
 
     const newConv: Conversation = {
       id: 'conv-' + Date.now(),
-      title: 'New Conversation',
+      title: 'New Session',
       mode: 'chat',
       messages: [welcomeMsg],
       createdAt: new Date().toISOString(),
@@ -147,21 +155,8 @@ export const App: React.FC = () => {
     setActiveConvId(newConv.id);
     setMessages([welcomeMsg]);
     setActiveMode('chat');
-  };
-
-  const handleCloseChat = () => {
-    setIsChatOpen(false);
-    handleStop();
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-      audioPlayerRef.current = null;
-    }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    setRobotState('idle');
     setInput('');
-    initNewChat();
+    setRobotState('idle');
   };
 
   const handleSelectConversation = (id: string) => {
@@ -170,6 +165,9 @@ export const App: React.FC = () => {
       setActiveConvId(conv.id);
       setMessages(conv.messages);
       setActiveMode(conv.mode);
+      if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      }
     }
   };
 
@@ -201,7 +199,6 @@ export const App: React.FC = () => {
     const chosenMode = modeOverride || activeMode;
     if (modeOverride) setActiveMode(modeOverride);
 
-    setIsChatOpen(true);
     setInput('');
 
     const userMsg: Message = {
@@ -218,7 +215,7 @@ export const App: React.FC = () => {
     setRobotState('thinking');
 
     if (messages.length <= 1 && activeConvId) {
-      const summaryTitle = textToSend.slice(0, 32) + (textToSend.length > 32 ? '...' : '');
+      const summaryTitle = textToSend.slice(0, 30) + (textToSend.length > 30 ? '...' : '');
       handleRenameConversation(activeConvId, summaryTitle);
     }
 
@@ -237,7 +234,7 @@ export const App: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server responded with ${response.status}`);
+        throw new Error(errorData.error || `Server responded with status ${response.status}`);
       }
 
       const data = await response.json();
@@ -411,62 +408,94 @@ export const App: React.FC = () => {
     window.speechSynthesis.speak(utterance);
   };
 
+  const hasUserMessages = messages.some((m) => m.role === 'user');
+
   return (
-    <div className="min-h-screen w-full flex flex-col alpha-ambient-bg text-[#F5F5F5] overflow-x-hidden">
-      <Navbar
-        onOpenIntegration={() => setIsIntegrationOpen(true)}
-        onWakeAlpha={() => setIsChatOpen(true)}
-      />
-
-      <main className="flex-1 w-full flex flex-col items-center">
-        <HeroSection
-          onSearchSubmit={(query) => handleSend(query)}
-          onChatWithAlpha={() => setIsChatOpen(true)}
-          onViewIntegrationCode={() => setIsIntegrationOpen(true)}
-          onSelectSuggestion={(prompt, mode) => handleSend(prompt, mode)}
-        />
-
-        <ApiStatusBar systemStatus={systemStatus} />
-
-        <FeatureCards onSelectFeature={() => setIsChatOpen(true)} />
-      </main>
-
-      <FloatingRobot
-        onOpenChat={(mode) => {
-          if (mode) setActiveMode(mode);
-          setIsChatOpen(true);
-        }}
-        robotState={robotState}
-        onOpenIntegration={() => setIsIntegrationOpen(true)}
-      />
-
-      <ChatPanel
-        isOpen={isChatOpen}
-        onClose={handleCloseChat}
-        activeMode={activeMode}
-        onSelectMode={(mode) => setActiveMode(mode)}
-        messages={messages}
-        input={input}
-        setInput={setInput}
-        onSend={() => handleSend()}
-        isLoading={isLoading}
-        onStop={handleStop}
-        isListening={isListening}
-        onToggleVoice={toggleVoiceInput}
-        onRegenerate={handleRegenerate}
-        onSpeak={handleSpeak}
+    <div className="min-h-screen w-full flex bg-[#080811] text-[#F8FAFC] alpha-universe-bg overflow-hidden relative">
+      
+      {/* 1. Left Collapsible Sidebar */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen((prev) => !prev)}
         conversations={conversations}
         activeConvId={activeConvId}
         onSelectConversation={handleSelectConversation}
         onNewChat={initNewChat}
         onRenameConversation={handleRenameConversation}
         onDeleteConversation={handleDeleteConversation}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        systemStatus={systemStatus}
       />
 
-      <IntegrationModal
-        isOpen={isIntegrationOpen}
-        onClose={() => setIsIntegrationOpen(false)}
+      {/* 2. Main Platform Area */}
+      <div
+        className={`flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ${
+          isSidebarOpen ? 'lg:pl-72 sm:lg:pl-80' : 'pl-0'
+        }`}
+      >
+        {/* Top Navigation Bar */}
+        <Navbar
+          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          isSidebarOpen={isSidebarOpen}
+          activeMode={activeMode}
+          onSelectMode={(mode) => setActiveMode(mode)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          systemStatus={systemStatus}
+          onNewChat={initNewChat}
+        />
+
+        {/* Dynamic Center Stage: Welcome Screen vs Active Chat Conversation */}
+        <main className="flex-1 w-full flex flex-col overflow-y-auto relative">
+          {!hasUserMessages ? (
+            <WelcomeScreen
+              robotState={robotState}
+              onSelectPrompt={(prompt, mode) => handleSend(prompt, mode)}
+              activeMode={activeMode}
+            />
+          ) : (
+            <MessageList
+              messages={messages}
+              isLoading={isLoading}
+              onRegenerate={handleRegenerate}
+              onSpeak={handleSpeak}
+              onStop={handleStop}
+            />
+          )}
+        </main>
+
+        {/* Floating Message Input Area at the bottom */}
+        <footer className="w-full flex-shrink-0 z-20">
+          <MessageComposer
+            input={input}
+            setInput={setInput}
+            onSend={() => handleSend()}
+            isLoading={isLoading}
+            onStop={handleStop}
+            isListening={isListening}
+            onToggleVoice={toggleVoiceInput}
+            activeModeLabel={activeMode.toUpperCase()}
+          />
+        </footer>
+
+      </div>
+
+      {/* 3. Corner Floating Companion (Visible when chatting and toggled) */}
+      {hasUserMessages && showCornerCompanion && (
+        <FloatingRobot
+          onOpenChat={(mode) => {
+            if (mode) setActiveMode(mode);
+          }}
+          robotState={robotState}
+        />
+      )}
+
+      {/* 4. Settings & Integration Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        systemStatus={systemStatus}
       />
+
     </div>
   );
 };

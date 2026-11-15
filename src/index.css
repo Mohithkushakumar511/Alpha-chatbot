@@ -2,23 +2,21 @@
 
 @layer base {
   :root {
-    --alpha-bg: #101010;
-    --alpha-header: #0A0A0A;
-    --alpha-chatbox: #181818;
-    --alpha-surface: #181818;
-    --alpha-surface-secondary: #202020;
-    --alpha-dark-red: #251719;
-    --alpha-input: #151515;
-    --alpha-crimson: #E11D48;
-    --alpha-crimson-deep: #BE123C;
-    --alpha-crimson-hover: #9F1239;
-    --alpha-crimson-glow: #F43F5E;
-    --alpha-border: #383034;
-    --alpha-text-primary: #F5F5F5;
-    --alpha-text-secondary: #B8B8B8;
-    --alpha-bubble-user: #4A1726;
-    --alpha-bubble-ai: #222222;
-    --alpha-status: #E11D48;
+    --alpha-bg: #080811;
+    --alpha-bg-secondary: #131020;
+    --alpha-surface: #131020;
+    --alpha-surface-card: rgba(19, 16, 32, 0.75);
+    --alpha-surface-hover: rgba(30, 24, 52, 0.85);
+    --alpha-purple: #8B5CF6;
+    --alpha-purple-glow: rgba(139, 92, 246, 0.35);
+    --alpha-neon-blue: #38BDF8;
+    --alpha-soft-violet: #B794F4;
+    --alpha-border: #251E3E;
+    --alpha-border-highlight: rgba(139, 92, 246, 0.45);
+    --alpha-text-primary: #F8FAFC;
+    --alpha-text-secondary: #A1A1AA;
+    --alpha-bubble-user: rgba(46, 31, 79, 0.7);
+    --alpha-bubble-ai: rgba(19, 16, 32, 0.85);
     --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-display: 'Space Grotesk', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -33,43 +31,125 @@
     width: 100%;
     min-height: 100%;
     overflow-x: hidden;
-    background-color: #101010;
-    color: #F5F5F5;
+    background-color: #080811;
+    color: #F8FAFC;
     font-family: var(--font-main);
     -webkit-font-smoothing: antialiased;
   }
 }
 
-.alpha-ambient-bg {
-  background-color: #101010;
+.alpha-universe-bg {
+  background-color: #080811;
   background-image: 
-    radial-gradient(circle at 18% 15%, rgba(225, 29, 72, 0.07) 0%, transparent 40%),
-    radial-gradient(circle at 82% 50%, rgba(190, 18, 60, 0.05) 0%, transparent 45%),
-    radial-gradient(circle at 50% 85%, rgba(37, 23, 25, 0.5) 0%, transparent 50%),
-    linear-gradient(to bottom, #101010 0%, #0A0A0A 100%);
+    radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(109, 40, 217, 0.15) 0%, transparent 55%),
+    linear-gradient(to bottom, #080811 0%, #0D0A1A 60%, #080811 100%);
   background-attachment: fixed;
 }
 
+.alpha-glass-panel {
+  background: rgba(19, 16, 32, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+}
+
+.alpha-glass-card {
+  background: rgba(22, 18, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alpha-glass-card:hover {
+  background: rgba(30, 24, 52, 0.8);
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.25);
+  transform: translateY(-2px);
+}
+
+.alpha-glow-btn {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+  transition: all 0.25s ease;
+}
+
+.alpha-glow-btn:hover {
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.65);
+  transform: translateY(-1px);
+}
+
+.alpha-glow-btn:active {
+  transform: translateY(0);
+}
+
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(225, 29, 72, 0.35);
-  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.25);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(225, 29, 72, 0.65);
+  background: rgba(139, 92, 246, 0.5);
 }
 
 @keyframes botFloatSlow {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(0.5deg);
+  }
 }
 
 .animate-bot-float {
-  animation: botFloatSlow 4s ease-in-out infinite;
+  animation: botFloatSlow 4.5s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes waveformBar {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 18px;
+  }
+}
+
+.animate-waveform-1 {
+  animation: waveformBar 0.8s ease-in-out infinite;
+}
+.animate-waveform-2 {
+  animation: waveformBar 0.8s ease-in-out 0.2s infinite;
+}
+.animate-waveform-3 {
+  animation: waveformBar 0.8s ease-in-out 0.4s infinite;
+}
+.animate-waveform-4 {
+  animation: waveformBar 0.8s ease-in-out 0.15s infinite;
+}
+.animate-waveform-5 {
+  animation: waveformBar 0.8s ease-in-out 0.35s infinite;
 }

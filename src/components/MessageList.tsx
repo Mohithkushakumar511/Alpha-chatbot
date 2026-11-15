@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { MessageBubble } from './MessageBubble';
+import { Bot } from 'lucide-react';
 import type { Message } from '../types';
 
 interface MessageListProps {
@@ -25,7 +26,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const lastAssistantIndex = messages.map((m) => m.role).lastIndexOf('assistant');
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+    <div className="flex-1 w-full max-w-4xl mx-auto overflow-y-auto px-4 py-4 sm:py-6 space-y-4">
       {messages.map((message, idx) => (
         <MessageBubble
           key={message.id || idx}
@@ -36,17 +37,26 @@ export const MessageList: React.FC<MessageListProps> = ({
         />
       ))}
 
-      {/* Typing / Reasoning Indicator */}
+      {/* Typing & Reasoning Indicator with 3 Animated Dots */}
       {isLoading && (
-        <div className="flex items-center gap-2.5 text-xs text-[#B8B8B8] py-1">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#E11D48] to-[#9F1239] flex items-center justify-center text-[#F5F5F5] font-display font-black text-xs shadow-sm shadow-[#E11D48]/20 flex-shrink-0">
-            A
+        <div className="flex items-center gap-3 py-2 animate-in fade-in duration-300">
+          <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-[#8B5CF6] via-[#6D28D9] to-[#38BDF8] p-[1px] shadow-[0_0_12px_rgba(139,92,246,0.35)] flex-shrink-0">
+            <div className="w-full h-full rounded-xl bg-[#080811] flex items-center justify-center">
+              <Bot className="w-4 h-4 text-[#B794F4]" />
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#38BDF8] animate-ping" />
           </div>
-          <div className="px-4 py-2.5 rounded-2xl bg-[#222222] border border-[#383034] flex items-center gap-1.5 shadow-md">
-            <span className="w-2 h-2 rounded-full bg-[#E11D48] animate-ping" />
-            <span className="w-1.5 h-1.5 rounded-full bg-[#BE123C] animate-pulse" />
-            <span className="w-1.5 h-1.5 rounded-full bg-[#9F1239] animate-pulse" />
-            <span className="text-[#B8B8B8] font-mono text-[11px] ml-1.5">Alpha is reasoning...</span>
+
+          <div className="px-4 py-3 rounded-2xl bg-[#131020]/90 border border-[#251E3E] backdrop-blur-xl flex items-center gap-2 shadow-lg shadow-black/50">
+            {/* 3 Animated Glowing Dots */}
+            <div className="flex items-center gap-1.5 px-0.5">
+              <span className="w-2 h-2 rounded-full bg-[#8B5CF6] animate-bounce [animation-delay:-0.3s]" />
+              <span className="w-2 h-2 rounded-full bg-[#B794F4] animate-bounce [animation-delay:-0.15s]" />
+              <span className="w-2 h-2 rounded-full bg-[#38BDF8] animate-bounce" />
+            </div>
+            <span className="text-xs text-[#A1A1AA] font-mono ml-2">
+              Alpha is thinking...
+            </span>
           </div>
         </div>
       )}
