@@ -10,22 +10,39 @@ import {
   Code2,
   Shield,
   Sliders,
+  Zap,
+  Scale,
+  BookOpen,
+  User as UserIcon,
+  LogOut,
 } from 'lucide-react';
-import type { SystemStatus } from '../types';
+import type { SystemStatus, ResponseLengthMode, User } from '../types';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   systemStatus: SystemStatus | null;
+  responseLength?: ResponseLengthMode;
+  onSelectResponseLength?: (mode: ResponseLengthMode) => void;
+  user?: User | null;
+  isAuthenticated?: boolean;
+  onOpenAuth?: (mode?: 'signin' | 'register') => void;
+  onLogout?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   systemStatus,
+  responseLength = 'balanced',
+  onSelectResponseLength,
+  user,
+  isAuthenticated = false,
+  onOpenAuth,
+  onLogout,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'status' | 'ai' | 'voice' | 'embed'>('status');
+  const [activeTab, setActiveTab] = useState<'status' | 'ai' | 'voice' | 'account' | 'embed'>('status');
 
   if (!isOpen) return null;
 
@@ -122,6 +139,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Volume2 className="w-3.5 h-3.5" />
             <span>Voice & Audio</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('account')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'account'
+                ? 'bg-[#8B5CF6] text-white shadow-md shadow-[#8B5CF6]/30 font-semibold'
+                : 'text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#1E1638]'
+            }`}
+          >
+            <UserIcon className="w-3.5 h-3.5" />
+            <span>Account Profile</span>
           </button>
 
           <button
@@ -235,7 +264,116 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* TAB 2: AI REASONING PREFERENCES */}
           {activeTab === 'ai' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              
+              {/* Response-Length Modes Configuration */}
+              <div className="p-4 rounded-2xl bg-[#131020] border border-[#251E3E]">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h4 className="text-sm font-semibold text-[#F8FAFC] flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-[#8B5CF6]" />
+                    <span>Response-Length & Detail Mode</span>
+                  </h4>
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#8B5CF6]/20 text-[#B794F4] border border-[#8B5CF6]/40">
+                    Active: {responseLength}
+                  </span>
+                </div>
+                <p className="text-xs text-[#A1A1AA] mb-3">
+                  Tailor Alpha's response style, conciseness, and level of technical depth.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  
+                  {/* Mode 1: Quick */}
+                  <button
+                    type="button"
+                    onClick={() => onSelectResponseLength?.('quick')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      responseLength === 'quick'
+                        ? 'bg-[#1E1638] border-[#8B5CF6] shadow-[0_0_15px_rgba(139,92,246,0.3)] ring-1 ring-[#8B5CF6]'
+                        : 'bg-[#080811] border-[#251E3E] hover:border-[#8B5CF6]/40 hover:bg-[#151026]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-[#F8FAFC]">
+                          <Zap className="w-3.5 h-3.5 text-[#38BDF8]" />
+                          <span>Quick</span>
+                        </span>
+                        {responseLength === 'quick' && (
+                          <Check className="w-3.5 h-3.5 text-[#38BDF8]" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                        Short, direct answers in 1–3 bullet points. No filler.
+                      </p>
+                    </div>
+                    <span className="text-[9px] font-mono text-[#38BDF8] mt-2 block">
+                      Fastest • 2–3 sentences
+                    </span>
+                  </button>
+
+                  {/* Mode 2: Balanced */}
+                  <button
+                    type="button"
+                    onClick={() => onSelectResponseLength?.('balanced')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      responseLength === 'balanced'
+                        ? 'bg-[#1E1638] border-[#8B5CF6] shadow-[0_0_15px_rgba(139,92,246,0.3)] ring-1 ring-[#8B5CF6]'
+                        : 'bg-[#080811] border-[#251E3E] hover:border-[#8B5CF6]/40 hover:bg-[#151026]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-[#F8FAFC]">
+                          <Scale className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                          <span>Balanced</span>
+                        </span>
+                        <span className="text-[9px] bg-[#8B5CF6]/30 text-[#B794F4] px-1.5 py-0.5 rounded font-mono">
+                          Default
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                        Clear 3–5 bullet points with practical examples and code.
+                      </p>
+                    </div>
+                    <span className="text-[9px] font-mono text-[#B794F4] mt-2 block">
+                      Recommended • Examples
+                    </span>
+                  </button>
+
+                  {/* Mode 3: Detailed */}
+                  <button
+                    type="button"
+                    onClick={() => onSelectResponseLength?.('detailed')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      responseLength === 'detailed'
+                        ? 'bg-[#1E1638] border-[#8B5CF6] shadow-[0_0_15px_rgba(139,92,246,0.3)] ring-1 ring-[#8B5CF6]'
+                        : 'bg-[#080811] border-[#251E3E] hover:border-[#8B5CF6]/40 hover:bg-[#151026]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-[#F8FAFC]">
+                          <BookOpen className="w-3.5 h-3.5 text-[#F472B6]" />
+                          <span>Detailed</span>
+                        </span>
+                        {responseLength === 'detailed' && (
+                          <Check className="w-3.5 h-3.5 text-[#F472B6]" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                        Comprehensive step-by-step breakdown and complete code.
+                      </p>
+                    </div>
+                    <span className="text-[9px] font-mono text-[#F472B6] mt-2 block">
+                      In-depth • Production code
+                    </span>
+                  </button>
+
+                </div>
+              </div>
+
+              {/* Primary Neural Model */}
               <div className="p-4 rounded-2xl bg-[#131020] border border-[#251E3E]">
                 <h4 className="text-sm font-semibold text-[#F8FAFC] mb-1">Primary Neural Model</h4>
                 <p className="text-xs text-[#A1A1AA] mb-3">
@@ -294,6 +432,85 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <span className="text-xs font-mono text-[#38BDF8]">Supported</span>
               </div>
+            </div>
+          )}
+
+          {/* TAB: ACCOUNT PROFILE */}
+          {activeTab === 'account' && (
+            <div className="space-y-4">
+              {isAuthenticated && user ? (
+                <div className="p-5 rounded-2xl bg-[#131020] border border-[#251E3E] space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#8B5CF6] to-[#38BDF8] p-[1.5px] flex-shrink-0">
+                      <div className="w-full h-full rounded-2xl bg-[#080811] flex items-center justify-center">
+                        <span className="font-bold text-base text-[#B794F4]">
+                          {user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-[#F8FAFC]">
+                        {user.full_name}
+                      </h4>
+                      <p className="text-xs text-[#A1A1AA] font-mono">
+                        {user.email}
+                      </p>
+                      <span className="inline-block mt-1 text-[10px] font-mono px-2 py-0.5 rounded bg-[#8B5CF6]/20 text-[#B794F4] border border-[#8B5CF6]/40">
+                        Alpha AI Member
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#251E3E] flex items-center justify-between text-xs text-[#A1A1AA]">
+                    <span>Conversations synced to your account</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onLogout?.();
+                        onClose();
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#EC4899]/20 hover:bg-[#EC4899]/30 border border-[#EC4899]/50 text-[#F472B6] font-medium transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-5 rounded-2xl bg-[#131020] border border-[#251E3E] text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[#1E1638] border border-[#251E3E] flex items-center justify-center text-[#8B5CF6] mx-auto">
+                    <UserIcon className="w-6 h-6 text-[#B794F4]" />
+                  </div>
+                  <h4 className="text-sm font-bold text-[#F8FAFC]">
+                    Currently in Guest Mode
+                  </h4>
+                  <p className="text-xs text-[#A1A1AA] max-w-sm mx-auto leading-relaxed">
+                    You can use Alpha AI completely free as a guest. Optionally create an account or sign in to sync your conversation history across devices.
+                  </p>
+                  <div className="pt-2 flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenAuth?.('signin');
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#1E1638] hover:bg-[#251E3E] border border-[#8B5CF6]/50 text-[#F8FAFC] text-xs font-semibold cursor-pointer transition-all"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenAuth?.('register');
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-xs font-semibold cursor-pointer transition-all shadow-md shadow-[#8B5CF6]/30"
+                    >
+                      Create Free Account
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

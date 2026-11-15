@@ -18,6 +18,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[ChatMessage] = Field(default_factory=list)
     mode: Optional[str] = "chat"
+    response_length: Optional[str] = "balanced"
 
 
 @router.post("/chat")
@@ -36,6 +37,7 @@ async def chat_endpoint(request: ChatRequest):
         ]
 
         mode = request.mode or "chat"
+        response_length = request.response_length or "balanced"
 
         if mode == "search":
             last_user_msg = next(
@@ -62,11 +64,16 @@ async def chat_endpoint(request: ChatRequest):
                         ),
                     })
 
-        reply = await groq_service.chat(formatted_messages, mode)
+        reply = await groq_service.chat(
+            formatted_messages,
+            mode=mode,
+            response_length=response_length,
+        )
 
         return {
             "reply": reply,
             "mode": mode,
+            "response_length": response_length,
             "sources": search_sources,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }

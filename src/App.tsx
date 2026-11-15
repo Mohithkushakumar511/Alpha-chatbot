@@ -5,16 +5,33 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { MessageList } from './components/MessageList';
 import { MessageComposer } from './components/MessageComposer';
 import { SettingsModal } from './components/SettingsModal';
-import { FloatingRobot } from './components/FloatingRobot';
-import type { AIMode, Message, Conversation, SystemStatus } from './types';
+import { AuthModal } from './components/AuthModal';
+import { CodeInterface } from './components/modes/CodeInterface';
+import { CreateInterface } from './components/modes/CreateInterface';
+import { SearchInterface } from './components/modes/SearchInterface';
+import { LearnInterface } from './components/modes/LearnInterface';
+import type { AIMode, Message, Conversation, SystemStatus, ResponseLengthMode, User } from './types';
 
 const STORAGE_KEY = 'alpha_conversations_v1';
-const ACTIVE_CONV_KEY = 'alpha_active_conv_v1';
+const RESPONSE_LENGTH_KEY = 'alpha_response_length_v1';
+const AUTH_TOKEN_KEY = 'alpha_auth_token_v1';
 
 const getApiBase = (): string => {
   const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+
+  // If running locally in development on localhost, communicate with local FastAPI backend
+  if (typeof window !== 'undefined') {
+    const isLocalhost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+
+    if (isLocalhost) {
+      return 'http://127.0.0.1:3001';
+    }
+  }
+
   if (!envUrl) {
-    return 'http://localhost:3001';
+    return 'http://127.0.0.1:3001';
   }
   const formatted = envUrl.startsWith('http://') || envUrl.startsWith('https://')
     ? envUrl
@@ -30,11 +47,40 @@ export const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [activeMode, setActiveMode] = useState<AIMode>('chat');
+  const [responseLength, setResponseLength] = useState<ResponseLengthMode>(() => {
+    try {
+      const saved = localStorage.getItem(RESPONSE_LENGTH_KEY) as ResponseLengthMode | null;
+      if (saved && ['quick', 'balanced', 'detailed'].includes(saved)) {
+        return saved;
+      }
+    } catch {}
+    return 'balanced';
+  });
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+
+  const handleSelectResponseLength = (mode: ResponseLengthMode) => {
+    setResponseLength(mode);
+    try {
+      localStorage.setItem(RESPONSE_LENGTH_KEY, mode);
+    } catch {}
+  };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const showCornerCompanion = true;
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  // Authentication & Guest Mode State
+  const [user, setUser] = useState<User | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(AUTH_TOKEN_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalInitialMode, setAuthModalInitialMode] = useState<'signin' | 'register'>('signin');
+  const isAuthenticated = Boolean(user && authToken);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -44,6 +90,26 @@ export const App: React.FC = () => {
   const recognitionRef = useRef<any>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
+  // Helper: Create a fresh new unique conversation session
+  const createFreshConversation = (targetMode: AIMode = 'chat'): Conversation => {
+    const welcomeMsg: Message = {
+      id: 'welcome-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+      role: 'assistant',
+      content: `Hey, I'm ALPHA 👋 Your futuristic AI universe companion in ${targetMode.toUpperCase()} mode. What would you like to explore today?`,
+      timestamp: new Date().toISOString(),
+      mode: targetMode,
+    };
+
+    return {
+      id: 'conv-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+      title: `${targetMode.charAt(0).toUpperCase() + targetMode.slice(1)} Session`,
+      mode: targetMode,
+      messages: [welcomeMsg],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  };
+
   // Set default sidebar open on large screens
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
@@ -51,14 +117,20 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // ALWAYS initialize a fresh new empty conversation on website launch or reload
   useEffect(() => {
     fetchSystemStatus();
     const interval = setInterval(fetchSystemStatus, 30000);
 
+    const freshConv = createFreshConversation('chat');
+    setActiveConvId(freshConv.id);
+    setMessages(freshConv.messages);
+    setActiveMode('chat');
+    setInput('');
+    setRobotState('idle');
+
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      const savedActiveId = localStorage.getItem(ACTIVE_CONV_KEY);
-
       if (stored) {
         let parsed: Conversation[] = JSON.parse(stored);
         parsed = parsed.map((conv) => ({
@@ -69,42 +141,178 @@ export const App: React.FC = () => {
               : m
           ),
         }));
-        setConversations(parsed);
-
-        const found = parsed.find((c) => c.id === savedActiveId) || parsed[0];
-        if (found) {
-          setActiveConvId(found.id);
-          setMessages(found.messages);
-          setActiveMode(found.mode);
-        } else {
-          initNewChat();
-        }
+        // Preserve all saved conversations that contain user messages in history
+        const savedHistory = parsed.filter((c) => c.messages.some((m) => m.role === 'user'));
+        setConversations([freshConv, ...savedHistory]);
       } else {
-        initNewChat();
+        setConversations([freshConv]);
       }
     } catch (err) {
       console.error('Failed to load chat history from LocalStorage:', err);
-      initNewChat();
+      setConversations([freshConv]);
     }
 
     return () => clearInterval(interval);
   }, []);
 
+  // Verify stored session on mount
   useEffect(() => {
-    if (conversations.length > 0) {
+    const verifyUserSession = async () => {
+      const token = authToken || localStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) return;
+
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            setUser(data.user);
+            setAuthToken(token);
+            await fetchUserConversations(token);
+            return;
+          }
+        }
+        // If expired or invalid
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        setUser(null);
+        setAuthToken(null);
       } catch (err) {
-        console.error('Failed to persist to LocalStorage:', err);
+        console.error('Session check failed:', err);
+      }
+    };
+
+    verifyUserSession();
+  }, []);
+
+  const fetchUserConversations = async (token: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversations && Array.isArray(data.conversations)) {
+          const userConvs = data.conversations.filter((c: Conversation) =>
+            c.messages.some((m) => m.role === 'user')
+          );
+          setConversations((prev) => {
+            // Keep the active fresh chat at the top and display user's saved chats in history
+            const activeFresh = prev.find((c) => !c.messages.some((m) => m.role === 'user'));
+            if (activeFresh) {
+              return [activeFresh, ...userConvs.filter((c: Conversation) => c.id !== activeFresh.id)];
+            }
+            return userConvs;
+          });
+          // Do not override activeConvId or messages: keep fresh new chat active
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch user conversations:', err);
+    }
+  };
+
+  const handleOpenAuth = (mode: 'signin' | 'register' = 'signin') => {
+    setAuthModalInitialMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const handleAuthSuccess = (token: string, newUser: User) => {
+    setAuthToken(token);
+    setUser(newUser);
+    try {
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+    } catch {}
+    fetchUserConversations(token);
+  };
+
+  const handleLogout = async () => {
+    if (authToken) {
+      try {
+        await fetch(`${API_BASE}/api/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+      } catch {}
+    }
+    try {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    } catch {}
+    setUser(null);
+    setAuthToken(null);
+  };
+
+  const handleTransferConversations = async (token: string) => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const convs = stored ? JSON.parse(stored) : conversations;
+      const validConvs = (convs || []).filter((c: Conversation) =>
+        c.messages.some((m) => m.role === 'user')
+      );
+
+      if (validConvs.length === 0) return;
+
+      const res = await fetch(`${API_BASE}/api/conversations/transfer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ conversations: validConvs }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to transfer conversations.');
+      }
+
+      const data = await res.json();
+      if (data.conversations && Array.isArray(data.conversations)) {
+        setConversations(data.conversations);
+      }
+    } catch (err) {
+      console.error('Error in handleTransferConversations:', err);
+      throw err;
+    }
+  };
+
+  const handleClearAllConversations = async () => {
+    if (authToken) {
+      try {
+        await fetch(`${API_BASE}/api/conversations`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+      } catch (err) {
+        console.error('Failed to clear account conversations:', err);
       }
     }
-  }, [conversations]);
+
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+
+    setConversations([]);
+    initNewChat();
+  };
+
+  const handleContinueGuest = () => {
+    const textarea = document.querySelector('textarea');
+    if (textarea) {
+      textarea.focus();
+    }
+  };
 
   useEffect(() => {
-    if (activeConvId) {
-      localStorage.setItem(ACTIVE_CONV_KEY, activeConvId);
+    try {
+      // Persist only conversations with actual user messages in storage
+      const toStore = conversations.filter((c) => c.messages.some((m) => m.role === 'user'));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    } catch (err) {
+      console.error('Failed to persist to LocalStorage:', err);
     }
-  }, [activeConvId]);
+  }, [conversations]);
 
   const fetchSystemStatus = async () => {
     try {
@@ -130,31 +338,19 @@ export const App: React.FC = () => {
     }
   };
 
-  const initNewChat = () => {
-    const welcomeMsg: Message = {
-      id: 'welcome-' + Date.now(),
-      role: 'assistant',
-      content: "Hey, I'm ALPHA 👋 Your futuristic AI universe companion. What would you like to explore today?",
-      timestamp: new Date().toISOString(),
-      mode: 'chat',
-    };
-
-    const newConv: Conversation = {
-      id: 'conv-' + Date.now(),
-      title: 'New Session',
-      mode: 'chat',
-      messages: [welcomeMsg],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  const initNewChat = (mode?: AIMode) => {
+    const targetMode = mode || activeMode || 'chat';
+    const freshConv = createFreshConversation(targetMode);
 
     setConversations((prev) => {
+      // Preserve all previous conversations that contain user messages
       const withUserMsgs = prev.filter((c) => c.messages.some((m) => m.role === 'user'));
-      return [newConv, ...withUserMsgs];
+      return [freshConv, ...withUserMsgs];
     });
-    setActiveConvId(newConv.id);
-    setMessages([welcomeMsg]);
-    setActiveMode('chat');
+
+    setActiveConvId(freshConv.id);
+    setMessages(freshConv.messages);
+    setActiveMode(targetMode);
     setInput('');
     setRobotState('idle');
   };
@@ -164,7 +360,9 @@ export const App: React.FC = () => {
     if (conv) {
       setActiveConvId(conv.id);
       setMessages(conv.messages);
-      setActiveMode(conv.mode);
+      if (conv.mode) {
+        setActiveMode(conv.mode);
+      }
       if (window.innerWidth < 1024) {
         setIsSidebarOpen(false);
       }
@@ -181,14 +379,24 @@ export const App: React.FC = () => {
     const remaining = conversations.filter((c) => c.id !== id);
     setConversations(remaining);
 
+    if (authToken) {
+      fetch(`${API_BASE}/api/conversations/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authToken}` },
+      }).catch(() => {});
+    }
+
     if (activeConvId === id) {
-      if (remaining.length > 0) {
-        setActiveConvId(remaining[0].id);
-        setMessages(remaining[0].messages);
-        setActiveMode(remaining[0].mode);
-      } else {
-        initNewChat();
-      }
+      initNewChat();
+    }
+  };
+
+  const handleSelectMode = (newMode: AIMode) => {
+    setActiveMode(newMode);
+    if (activeConvId) {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === activeConvId ? { ...c, mode: newMode, updatedAt: new Date().toISOString() } : c))
+      );
     }
   };
 
@@ -197,7 +405,9 @@ export const App: React.FC = () => {
     if (!textToSend || isLoading) return;
 
     const chosenMode = modeOverride || activeMode;
-    if (modeOverride) setActiveMode(modeOverride);
+    if (modeOverride && modeOverride !== activeMode) {
+      setActiveMode(modeOverride);
+    }
 
     setInput('');
 
@@ -228,6 +438,7 @@ export const App: React.FC = () => {
         body: JSON.stringify({
           messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
           mode: chosenMode,
+          response_length: responseLength,
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -245,6 +456,7 @@ export const App: React.FC = () => {
         content: data.reply || 'No response generated.',
         timestamp: data.timestamp || new Date().toISOString(),
         mode: chosenMode,
+        responseLength: responseLength,
         sources: data.sources || [],
       };
 
@@ -255,10 +467,27 @@ export const App: React.FC = () => {
         setConversations((prev) =>
           prev.map((c) =>
             c.id === activeConvId
-              ? { ...c, messages: finalMessages, updatedAt: new Date().toISOString() }
+              ? { ...c, messages: finalMessages, mode: chosenMode, updatedAt: new Date().toISOString() }
               : c
           )
         );
+
+        if (authToken) {
+          const currentConv = conversations.find((c) => c.id === activeConvId);
+          fetch(`${API_BASE}/api/conversations`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+              id: activeConvId,
+              title: currentConv?.title || 'New Chat',
+              mode: chosenMode,
+              messages: finalMessages,
+            }),
+          }).catch(() => {});
+        }
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
@@ -420,11 +649,16 @@ export const App: React.FC = () => {
         conversations={conversations}
         activeConvId={activeConvId}
         onSelectConversation={handleSelectConversation}
-        onNewChat={initNewChat}
+        onNewChat={() => initNewChat()}
         onRenameConversation={handleRenameConversation}
         onDeleteConversation={handleDeleteConversation}
+        onClearAllConversations={handleClearAllConversations}
         onOpenSettings={() => setIsSettingsOpen(true)}
         systemStatus={systemStatus}
+        user={user}
+        isAuthenticated={isAuthenticated}
+        onOpenAuth={handleOpenAuth}
+        onLogout={handleLogout}
       />
 
       {/* 2. Main Platform Area */}
@@ -433,67 +667,141 @@ export const App: React.FC = () => {
           isSidebarOpen ? 'lg:pl-72 sm:lg:pl-80' : 'pl-0'
         }`}
       >
-        {/* Top Navigation Bar */}
+        {/* Top Navigation Bar with Mode Switcher */}
         <Navbar
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           isSidebarOpen={isSidebarOpen}
           activeMode={activeMode}
-          onSelectMode={(mode) => setActiveMode(mode)}
+          onSelectMode={handleSelectMode}
           onOpenSettings={() => setIsSettingsOpen(true)}
           systemStatus={systemStatus}
-          onNewChat={initNewChat}
+          onNewChat={() => initNewChat()}
+          hasUserMessages={hasUserMessages}
+          robotState={robotState}
+          responseLength={responseLength}
+          onSelectResponseLength={handleSelectResponseLength}
+          user={user}
+          isAuthenticated={isAuthenticated}
+          onOpenAuth={handleOpenAuth}
         />
 
-        {/* Dynamic Center Stage: Welcome Screen vs Active Chat Conversation */}
+        {/* Dynamic Center Stage: 5 Distinct Specialized Mode Interfaces */}
         <main className="flex-1 w-full flex flex-col overflow-y-auto relative">
-          {!hasUserMessages ? (
-            <WelcomeScreen
-              robotState={robotState}
-              onSelectPrompt={(prompt, mode) => handleSend(prompt, mode)}
-              activeMode={activeMode}
-            />
-          ) : (
-            <MessageList
+          
+          {/* MODE 1: CHAT */}
+          {activeMode === 'chat' && (
+            !hasUserMessages ? (
+              <WelcomeScreen
+                robotState={robotState}
+                onSelectPrompt={(prompt, mode) => handleSend(prompt, mode)}
+                activeMode={activeMode}
+                isInputActive={isInputFocused || Boolean(input.trim())}
+                onContinueGuest={handleContinueGuest}
+                onOpenAuth={handleOpenAuth}
+                isAuthenticated={isAuthenticated}
+                userName={user?.full_name}
+              />
+            ) : (
+              <MessageList
+                messages={messages}
+                isLoading={isLoading}
+                onRegenerate={handleRegenerate}
+                onSpeak={handleSpeak}
+                onStop={handleStop}
+              />
+            )
+          )}
+
+          {/* MODE 2: CODE */}
+          {activeMode === 'code' && (
+            <CodeInterface
               messages={messages}
               isLoading={isLoading}
-              onRegenerate={handleRegenerate}
-              onSpeak={handleSpeak}
+              onSend={(prompt) => handleSend(prompt, 'code')}
               onStop={handleStop}
+              onRegenerate={handleRegenerate}
             />
           )}
+
+          {/* MODE 3: CREATE */}
+          {activeMode === 'create' && (
+            <CreateInterface
+              messages={messages}
+              isLoading={isLoading}
+              onSend={(prompt) => handleSend(prompt, 'create')}
+              onStop={handleStop}
+              onRegenerate={handleRegenerate}
+            />
+          )}
+
+          {/* MODE 4: SEARCH */}
+          {activeMode === 'search' && (
+            <SearchInterface
+              messages={messages}
+              isLoading={isLoading}
+              onSend={(prompt) => handleSend(prompt, 'search')}
+              onStop={handleStop}
+              onRegenerate={handleRegenerate}
+              systemStatus={systemStatus}
+            />
+          )}
+
+          {/* MODE 5: LEARN */}
+          {activeMode === 'learn' && (
+            <LearnInterface
+              messages={messages}
+              isLoading={isLoading}
+              onSend={(prompt) => handleSend(prompt, 'learn')}
+              onStop={handleStop}
+              onRegenerate={handleRegenerate}
+            />
+          )}
+
         </main>
 
-        {/* Floating Message Input Area at the bottom */}
-        <footer className="w-full flex-shrink-0 z-20">
-          <MessageComposer
-            input={input}
-            setInput={setInput}
-            onSend={() => handleSend()}
-            isLoading={isLoading}
-            onStop={handleStop}
-            isListening={isListening}
-            onToggleVoice={toggleVoiceInput}
-            activeModeLabel={activeMode.toUpperCase()}
-          />
-        </footer>
+        {/* Floating Message Input Area at the bottom (Primary in Chat Mode) */}
+        {activeMode === 'chat' && (
+          <footer className="w-full flex-shrink-0 z-20">
+            <MessageComposer
+              input={input}
+              setInput={setInput}
+              onSend={() => handleSend()}
+              isLoading={isLoading}
+              onStop={handleStop}
+              isListening={isListening}
+              onToggleVoice={toggleVoiceInput}
+              activeModeLabel="CHAT"
+              onFocusChange={setIsInputFocused}
+              responseLength={responseLength}
+              onSelectResponseLength={handleSelectResponseLength}
+            />
+          </footer>
+        )}
 
       </div>
 
-      {/* 3. Corner Floating Companion (Visible when chatting and toggled) */}
-      {hasUserMessages && showCornerCompanion && (
-        <FloatingRobot
-          onOpenChat={(mode) => {
-            if (mode) setActiveMode(mode);
-          }}
-          robotState={robotState}
-        />
-      )}
-
-      {/* 4. Settings & Integration Modal */}
+      {/* Settings & Integration Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         systemStatus={systemStatus}
+        responseLength={responseLength}
+        onSelectResponseLength={handleSelectResponseLength}
+        user={user}
+        isAuthenticated={isAuthenticated}
+        onOpenAuth={handleOpenAuth}
+        onLogout={handleLogout}
+      />
+
+      {/* Authentication & Account Creation Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        apiBase={API_BASE}
+        onAuthSuccess={handleAuthSuccess}
+        guestConversations={conversations.filter((c) => c.messages.some((m) => m.role === 'user'))}
+        onTransferConversations={handleTransferConversations}
+        initialMode={authModalInitialMode}
       />
 
     </div>

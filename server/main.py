@@ -18,6 +18,7 @@ from server.config import (
 from server.routes.status import router as status_router
 from server.routes.chat import router as chat_router
 from server.routes.voice import router as voice_router
+from server.routes.auth import router as auth_router
 
 
 @asynccontextmanager
@@ -82,6 +83,7 @@ app.add_middleware(
 app.include_router(status_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
 
 dist_dir = BASE_DIR / "dist"
 if dist_dir.exists() and dist_dir.is_dir():

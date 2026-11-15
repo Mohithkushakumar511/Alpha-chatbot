@@ -5,7 +5,7 @@ import { searchService } from '../services/searchService.js';
 const router = express.Router();
 
 router.post('/chat', async (req, res) => {
-  const { messages, mode = 'chat' } = req.body;
+  const { messages, mode = 'chat', response_length = 'balanced' } = req.body;
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required and must not be empty.' });
@@ -40,11 +40,12 @@ router.post('/chat', async (req, res) => {
       }
     }
 
-    const reply = await groqService.chat(formattedMessages, mode);
+    const reply = await groqService.chat(formattedMessages, mode, response_length);
 
     res.json({
       reply,
       mode,
+      response_length,
       sources: searchSources,
       timestamp: new Date().toISOString(),
     });

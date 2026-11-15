@@ -15,3 +15,4 @@ FISH_AUDIO_VOICE_ID = os.getenv("FISH_AUDIO_VOICE_ID", "9bd4fc7e630341749d8f1ade
 FISH_AUDIO_MODEL = os.getenv("FISH_AUDIO_MODEL", "s2.1-pro-free").strip()
 SERVER_PORT = int(os.getenv("PORT") or os.getenv("SERVER_PORT", "3001"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "").strip()
+JWT_SECRET = os.getenv("JWT_SECRET", "alpha-ai-universe-jwt-secret-key-2026").strip()

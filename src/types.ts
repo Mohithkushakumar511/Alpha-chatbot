@@ -1,4 +1,5 @@
 export type AIMode = 'chat' | 'create' | 'search' | 'code' | 'learn';
+export type ResponseLengthMode = 'quick' | 'balanced' | 'detailed';
 
 export interface SearchSource {
   title: string;
@@ -12,6 +13,7 @@ export interface Message {
   content: string;
   timestamp: string;
   mode?: AIMode;
+  responseLength?: ResponseLengthMode;
   sources?: SearchSource[];
 }
 
@@ -22,6 +24,20 @@ export interface Conversation {
   messages: Message[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isGuest: boolean;
 }
 
 export interface SystemStatus {

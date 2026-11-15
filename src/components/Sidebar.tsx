@@ -11,9 +11,11 @@ import {
   Sparkles,
   PanelLeftClose,
   User,
-  ShieldCheck,
+  LogOut,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
-import type { Conversation, SystemStatus } from '../types';
+import type { Conversation, SystemStatus, User as UserType } from '../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -24,8 +26,13 @@ interface SidebarProps {
   onNewChat: () => void;
   onRenameConversation: (id: string, newTitle: string) => void;
   onDeleteConversation: (id: string) => void;
+  onClearAllConversations?: () => void;
   onOpenSettings: () => void;
   systemStatus: SystemStatus | null;
+  user: UserType | null;
+  isAuthenticated: boolean;
+  onOpenAuth: (mode?: 'signin' | 'register') => void;
+  onLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -37,8 +44,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNewChat,
   onRenameConversation,
   onDeleteConversation,
+  onClearAllConversations,
   onOpenSettings,
   systemStatus,
+  user,
+  isAuthenticated,
+  onOpenAuth,
+  onLogout,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -157,7 +169,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Chat History Section */}
         <div className="px-3 pt-2 pb-1 flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-[#A1A1AA] flex-shrink-0">
           <span>Recent Sessions</span>
-          <span className="text-[10px] text-[#A1A1AA]/70">{conversations.length}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[#A1A1AA]/70">{conversations.length}</span>
+            {conversations.length > 0 && onClearAllConversations && (
+              <button
+                type="button"
+                onClick={onClearAllConversations}
+                className="text-[10px] font-mono text-[#A1A1AA] hover:text-[#EC4899] transition-colors cursor-pointer"
+                title="Clear all conversations"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1">
@@ -294,31 +318,81 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-[10px] text-[#A1A1AA]/60 font-mono">v2.0</span>
           </button>
 
-          {/* User Profile */}
-          <div className="pt-2 border-t border-[#251E3E]/60 flex items-center justify-between px-2">
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#8B5CF6] to-[#38BDF8] p-[1px]">
-                  <div className="w-full h-full rounded-full bg-[#080811] flex items-center justify-center">
-                    <User className="w-3.5 h-3.5 text-[#B794F4]" />
+          {/* User Profile Section */}
+          {isAuthenticated && user ? (
+            /* REGISTERED USER PROFILE */
+            <div className="pt-2 border-t border-[#251E3E]/60 flex items-center justify-between px-1">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#8B5CF6] to-[#38BDF8] p-[1px]">
+                    <div className="w-full h-full rounded-full bg-[#080811] flex items-center justify-center">
+                      <span className="font-bold text-xs text-[#B794F4]">
+                        {user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#38BDF8] ring-2 ring-[#0B0914]" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-semibold text-[#F8FAFC] leading-none truncate" title={user.full_name}>
+                    {user.full_name}
+                  </span>
+                  <span className="text-[10px] text-[#B794F4] font-mono mt-0.5">
+                    Alpha AI Member
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="p-1.5 rounded-lg text-[#A1A1AA] hover:text-[#EC4899] hover:bg-[#EC4899]/10 transition-colors cursor-pointer"
+                  title="Sign out of Alpha"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* GUEST USER PROFILE */
+            <div className="pt-2 border-t border-[#251E3E]/60 flex flex-col gap-2 px-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#1E1638] border border-[#251E3E] flex items-center justify-center text-[#A1A1AA]">
+                    <User className="w-4 h-4 text-[#A1A1AA]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-[#F8FAFC] leading-none">
+                      Guest User
+                    </span>
+                    <span className="text-[10px] text-[#A1A1AA] font-mono mt-0.5">
+                      Guest Mode
+                    </span>
                   </div>
                 </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#38BDF8] ring-2 ring-[#0B0914]" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-[#F8FAFC] leading-none">
-                  AI Explorer
-                </span>
-                <span className="text-[10px] text-[#A1A1AA] font-mono mt-0.5">
-                  Pro Workspace
-                </span>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-1 text-[#38BDF8]" title="Enterprise Shield Active">
-              <ShieldCheck className="w-4 h-4" />
+                <button
+                  type="button"
+                  onClick={() => onOpenAuth('signin')}
+                  className="px-2 py-1 rounded-lg bg-[#1E1638] hover:bg-[#251E3E] border border-[#8B5CF6]/40 text-[#B794F4] text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                  title="Sign In"
+                >
+                  <LogIn className="w-3 h-3" />
+                  <span>Sign In</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onOpenAuth('register')}
+                className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#8B5CF6]/20 to-[#38BDF8]/15 hover:from-[#8B5CF6]/30 hover:to-[#38BDF8]/25 border border-[#8B5CF6]/40 text-[#F8FAFC] text-[11px] font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5 text-[#38BDF8]" />
+                <span>Create Free Account</span>
+              </button>
             </div>
-          </div>
+          )}
 
         </div>
       </aside>

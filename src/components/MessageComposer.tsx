@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Send, Mic, MicOff, Square, Sparkles } from 'lucide-react';
+import type { ResponseLengthMode } from '../types';
 
 interface MessageComposerProps {
   input: string;
@@ -10,6 +11,9 @@ interface MessageComposerProps {
   isListening: boolean;
   onToggleVoice: () => void;
   activeModeLabel?: string;
+  onFocusChange?: (focused: boolean) => void;
+  responseLength?: ResponseLengthMode;
+  onSelectResponseLength?: (mode: ResponseLengthMode) => void;
 }
 
 export const MessageComposer: React.FC<MessageComposerProps> = ({
@@ -21,6 +25,9 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   isListening,
   onToggleVoice,
   activeModeLabel = 'Chat',
+  onFocusChange,
+  responseLength = 'balanced',
+  onSelectResponseLength,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -107,6 +114,8 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
             rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onFocus={() => onFocusChange?.(true)}
+            onBlur={() => onFocusChange?.(false)}
             onKeyDown={handleKeyDown}
             placeholder="Ask Alpha anything..."
             className="flex-1 bg-transparent border-0 outline-none text-xs sm:text-sm text-[#F8FAFC] placeholder:text-[#A1A1AA]/50 resize-none max-h-40 py-2 px-1 leading-relaxed"
@@ -137,13 +146,58 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         </div>
       </div>
 
-      {/* Helper Footer text */}
-      <div className="w-full flex items-center justify-between text-[10px] sm:text-[11px] text-[#A1A1AA]/60 px-3 mt-2 font-mono">
-        <span className="flex items-center gap-1.5">
-          <Sparkles className="w-3 h-3 text-[#8B5CF6]" />
-          <span>Operating in <strong>{activeModeLabel}</strong> mode</span>
-        </span>
-        <span className="hidden sm:inline">
+      {/* Helper Footer: Mode Info + Response Length Selector + Key Hints */}
+      <div className="w-full flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] text-[#A1A1AA]/70 px-2 sm:px-3 mt-2 font-mono">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="flex items-center gap-1.5 text-[#B794F4]">
+            <Sparkles className="w-3 h-3 text-[#8B5CF6]" />
+            <span><strong>{activeModeLabel}</strong> mode</span>
+          </span>
+
+          <span className="text-[#251E3E] hidden sm:inline">•</span>
+
+          {/* Response-Length Pill Switcher */}
+          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-[#131020]/90 border border-[#251E3E]">
+            <button
+              type="button"
+              onClick={() => onSelectResponseLength?.('quick')}
+              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
+                responseLength === 'quick'
+                  ? 'bg-[#38BDF8]/25 text-[#38BDF8] font-bold border border-[#38BDF8]/50 shadow-[0_0_8px_rgba(56,189,248,0.3)]'
+                  : 'text-[#A1A1AA] hover:text-[#F8FAFC]'
+              }`}
+              title="Quick mode: Short answers, 1–3 bullets, zero filler"
+            >
+              ⚡ Quick
+            </button>
+            <button
+              type="button"
+              onClick={() => onSelectResponseLength?.('balanced')}
+              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
+                responseLength === 'balanced'
+                  ? 'bg-[#8B5CF6]/25 text-[#B794F4] font-bold border border-[#8B5CF6]/50 shadow-[0_0_8px_rgba(139,92,246,0.3)]'
+                  : 'text-[#A1A1AA] hover:text-[#F8FAFC]'
+              }`}
+              title="Balanced mode: Explanations with examples, 3–5 bullets"
+            >
+              ⚖️ Balanced
+            </button>
+            <button
+              type="button"
+              onClick={() => onSelectResponseLength?.('detailed')}
+              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
+                responseLength === 'detailed'
+                  ? 'bg-[#F472B6]/25 text-[#F472B6] font-bold border border-[#F472B6]/50 shadow-[0_0_8px_rgba(244,114,182,0.3)]'
+                  : 'text-[#A1A1AA] hover:text-[#F8FAFC]'
+              }`}
+              title="Detailed mode: Comprehensive explanations and complete code"
+            >
+              📖 Detailed
+            </button>
+          </div>
+        </div>
+
+        <span className="hidden sm:inline text-[#A1A1AA]/50">
           Enter to send • Shift + Enter for new line
         </span>
       </div>

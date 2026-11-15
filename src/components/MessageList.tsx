@@ -26,7 +26,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const lastAssistantIndex = messages.map((m) => m.role).lastIndexOf('assistant');
 
   return (
-    <div className="flex-1 w-full max-w-4xl mx-auto overflow-y-auto px-4 py-4 sm:py-6 space-y-4">
+    <div className="flex-1 w-full max-w-4xl mx-auto overflow-y-auto px-4 py-4 sm:py-6 pb-10 space-y-4">
       {messages.map((message, idx) => (
         <MessageBubble
           key={message.id || idx}
@@ -61,7 +61,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         </div>
       )}
 
-      <div ref={bottomRef} />
+      <div ref={bottomRef} className="h-6 flex-shrink-0" />
     </div>
   );
 };

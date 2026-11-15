@@ -3,6 +3,13 @@ node_modules/
 .pnp
 .pnp.js
 
+# Database & Persistent storage
+*.db
+*.sqlite
+*.sqlite3
+server/data/
+data/
+
 # Environment & Secrets
 .env
 .env.*

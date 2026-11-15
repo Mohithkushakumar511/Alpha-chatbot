@@ -64,6 +64,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 {message.mode}
               </span>
             )}
+            {!isUser && message.responseLength && (
+              <span className={`text-[9px] uppercase px-1.5 py-0.2 rounded bg-[#131020] border border-[#251E3E] ${
+                message.responseLength === 'quick'
+                  ? 'text-[#38BDF8]'
+                  : message.responseLength === 'detailed'
+                  ? 'text-[#F472B6]'
+                  : 'text-[#A1A1AA]'
+              }`}>
+                {message.responseLength}
+              </span>
+            )}
             <span className="text-[10px] text-[#A1A1AA]/50">
               {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
